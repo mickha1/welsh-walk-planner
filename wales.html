@@ -52,7 +52,7 @@ select{font:inherit;padding:11px 13px;border:1px solid #9da7ad;border-radius:8px
 
 <div id="status" aria-live="polite">All 49 walks are listed below.</div>
 
-<div class="sort-controls"><label for="sort">Sort by</label><select id="sort"><option value="book">Book order</option><option value="driving">Driving distance — nearest first</option><option value="peaks">Number of peaks — most first</option><option value="walking">Walking distance — shortest first</option></select></div><p class="sort-help" id="sort-help" aria-live="polite">Choose a sort order. Calculate journeys to compare driving distances.</p><div class="table-wrap" tabindex="0" role="region" aria-label="Walk comparison table">
+<div class="sort-controls"><label for="sort">Sort by</label><select id="sort"><option value="book">Book order</option><option value="driving">Driving distance — nearest first</option><option value="peaks">Number of peaks — most first</option><option value="walking">Walking distance — shortest first</option></select><label for="distance-limit">Within driving distance</label><select id="distance-limit"><option value="">Any distance</option><option value="10">10 miles</option><option value="20">20 miles</option><option value="30">30 miles</option><option value="40">40 miles</option><option value="50">50 miles</option><option value="75">75 miles</option><option value="100">100 miles</option></select></div><p class="sort-help" id="sort-help" aria-live="polite">Choose a sort order. Calculate journeys to compare driving distances.</p><p id="filter-status" class="sort-help" aria-live="polite"></p><div class="table-wrap" tabindex="0" role="region" aria-label="Walk comparison table">
 <table>
 <thead>
 <tr><th>Walk</th><th>Peaks</th><th>Walking distance</th><th>Parking location</th><th>Driving distance</th><th>Driving time</th></tr>
@@ -115,7 +115,7 @@ select{font:inherit;padding:11px 13px;border:1px solid #9da7ad;border-radius:8px
 No personal details are stored. The campsite postcode is used only to calculate the journeys and is not saved by this page.
 Times use normal road speeds and do not include live traffic.
 </div>
-<div class="version">Version 1.1 — peak counts, walking distances and sorting</div>
+<div class="version">Version 1.2 — optional driving-distance filter</div>
 </main>
 
 <script>
@@ -178,6 +178,7 @@ async function calculate(){
 calculateButton.addEventListener('click',calculate);
 postcodeInput.addEventListener('keydown',e=>{if(e.key==='Enter')calculate()});
 const sortSelect=document.getElementById('sort');
+const distanceLimit=document.getElementById('distance-limit');
 function compareDriving(a,b){
   const ad=Number.isFinite(a.drivingMetres)?a.drivingMetres:Infinity;
   const bd=Number.isFinite(b.drivingMetres)?b.drivingMetres:Infinity;
@@ -194,12 +195,23 @@ function sortRows(){
   const body=document.getElementById('results');
   sorted.forEach(w=>body.appendChild(document.getElementById(`row-${w.number}`)));
   const hasDriving=walks.some(w=>Number.isFinite(w.drivingMetres));
+  const limit=distanceLimit.value===''?null:Number(distanceLimit.value);
+  let shown=0;
+  sorted.forEach(w=>{
+    const visible=limit===null||(Number.isFinite(w.drivingMetres)&&w.drivingMetres<=limit*1609.344);
+    document.getElementById(`row-${w.number}`).hidden=!visible;
+    if(visible)shown++;
+  });
+  document.getElementById('filter-status').textContent=limit===null?`Showing all ${walks.length} walks.`:
+    !hasDriving?'Calculate journeys from your campsite postcode to show walks within this distance.':
+    `Showing ${shown} of ${walks.length} walks within ${limit} driving miles.`+(shown===0?' Try a larger distance.':'')+' Train-only starts and journeys without a driving distance are excluded.';
   document.getElementById('sort-help').textContent=mode==='driving'?(hasDriving?'Nearest driving journeys first. Unavailable journeys and train-only starts follow.':'Enter a postcode and calculate journeys to sort by driving distance.'):
     mode==='peaks'?'Most peaks first. Equal counts are ordered by driving distance when calculated.':
     mode==='walking'?'Shortest walks first. Distances are the complete book routes.':'Walks are in book order.';
 }
 sortSelect.addEventListener('change',sortRows);
-
+distanceLimit.addEventListener('change',sortRows);
+sortRows();
 </script>
 </body>
 </html>
